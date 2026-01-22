@@ -1,0 +1,192 @@
+<div class="metric-inner">
+  <!-- Header -->
+  <div class="metric-header">
+    <span class="metric-title"></span>
+
+      <span class="metric-tooltip"></span>
+
+  </div>
+
+  <!-- Ring -->
+  <div class="ring-wrapper">
+    <svg class="score-ring" viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="metricGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#8adfff" />
+          <stop offset="100%" stop-color="#00bfff" />
+        </linearGradient>
+      </defs>
+      <circle class="ring-bg" cx="50" cy="50" r="40" />
+      <circle class="ring-score" cx="50" cy="50" r="40" stroke="url(#metricGradient)" />
+    </svg>
+    <div class="ring-text"><span></span></div>
+  </div>
+
+  <!-- Delta -->
+  <div class="metric-delta"></div>
+  <!-- Tooltip Expand -->
+  <div class="tooltip-info-expand"></div>
+
+</div>
+
+
+<style>
+
+.tooltip-info-expand{
+	font-family: 'Lato', sans-serif !important;
+	font-size:16px;
+  line-height:1.3em;
+  font-weight:300;
+}
+
+/*Brand Metric Rondels*/
+
+.metric-inner {
+  background: #fff;
+  border-radius: 15px;
+  padding: 16px 16px 30px 16px;
+  width: 200px;
+  font-family: Onest, sans-serif;
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+}
+
+.metric-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.metric-info {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-wrapper {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 12px auto 0;
+}
+
+.score-ring {
+  transform: rotate(-90deg);
+}
+
+.ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 700;
+  color: #333;
+}
+
+.ring-score,
+.ring-bg {
+  fill: none;
+  stroke-width: 20;
+}
+
+.ring-bg {
+  stroke: #e6e6e6;
+}
+
+.ring-score {
+  stroke-dasharray: 251.3;
+  stroke-dashoffset: 251.3;
+  transition: stroke-dashoffset 1s ease-out;
+}
+
+.metric-delta {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.metric-delta.positive {
+  color: #1fa750;
+}
+
+.metric-delta.negative {
+  color: #333;
+}
+
+.metric-info {
+  position: relative;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;               /* ensures no inline spacing issues */
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;              /* fixes extra line spacing */
+  vertical-align: middle;      /* optional for inline fallback */
+  overflow: visible;           /* ensure tooltip doesn’t clip */
+}
+
+.metric-tooltip {
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.metric-info:hover .metric-tooltip {
+  opacity: 0;
+}
+
+
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Find all commentary divs
+  document.querySelectorAll('.tooltip-info-expand').forEach(el => {
+    // Look for the data attribute on the closest parent container 
+    // (the one that has your Webflow custom attributes)
+    const parent = el.closest('[data-commentary]');
+    
+    if (parent) {
+      const commentaryText = parent.getAttribute('data-commentary');
+      el.textContent = commentaryText;
+    }
+  });
+
+  // Handle the tooltips
+  document.querySelectorAll('.metric-info').forEach(el => {
+    const parent = el.closest('[data-tooltip]');
+    const tooltipSpan = el.querySelector('.metric-tooltip');
+    
+    if (parent && tooltipSpan) {
+      tooltipSpan.textContent = parent.getAttribute('data-tooltip');
+    }
+  });
+});
+</script>
