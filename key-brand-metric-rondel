@@ -165,7 +165,80 @@
 
 </style>
 
+<script>
+window.Webflow ||= [];
+Webflow.push(() => {
 
+  const RADIUS = 40;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+  function animateNumber(el, to, duration = 800) {
+    let start = 0;
+    const stepTime = 16;
+    const increment = to / (duration / stepTime);
+    function step() {
+      start += increment;
+      if (start >= to) el.textContent = Math.round(to);
+      else {
+        el.textContent = Math.round(start);
+        requestAnimationFrame(step);
+      }
+    }
+    step();
+  }
+
+  function updateMetricCard(card, score, delta = null, label = null) {
+    const ring = card.querySelector(".ring-score");
+    const textEl = card.querySelector(".ring-text span");
+    const labelEl = card.querySelector(".metric-title");
+    const deltaEl = card.querySelector(".metric-delta");
+    if (!ring || !textEl || !labelEl) return;
+
+    const clamped = Math.min(100, Math.max(0, Number(score)));
+    ring.style.strokeDasharray = CIRCUMFERENCE;
+    ring.style.strokeDashoffset = CIRCUMFERENCE;
+    ring.style.transition = "stroke-dashoffset 1s ease-out";
+
+    requestAnimationFrame(() => {
+      ring.style.strokeDashoffset = CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE;
+    });
+
+    animateNumber(textEl, clamped);
+
+    if (label) labelEl.textContent = label;
+
+    if (deltaEl && delta !== null) {
+      const rounded = Math.round(Number(delta));
+      deltaEl.textContent = `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`;
+      deltaEl.classList.toggle("positive", rounded > 0);
+      deltaEl.classList.toggle("negative", rounded < 0);
+    }
+  }
+
+  function populateMetrics(apiData) {
+    document.querySelectorAll(".metric-card").forEach(card => {
+      const metricKey = card.dataset.metric;
+      const label = card.dataset.label;
+      const delta = card.dataset.delta || null;
+      const score = apiData[metricKey] ?? 0;
+      updateMetricCard(card, score, delta, label);
+    });
+  }
+  
+
+
+
+  // Example demo data
+  const demoData = {
+    brand_awareness_percent: 84.3,
+    brand_relevance_percent: 71.8,
+    brand_consideration_percent: 66.2,
+    brand_trust_percent: 78.9
+  };
+
+  setTimeout(() => populateMetrics(demoData), 100);
+});
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
