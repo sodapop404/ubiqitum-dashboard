@@ -1,180 +1,113 @@
-<script>
-(function () {
-  if (!window.Chart) {
-    console.warn("Chart.js not found — keyBrandMetric_ringChart not initialised");
-    return;
-  }
+// keyBrandMetric_ringChart.js
 
-  /* =====================================================
-     INTERNAL REGISTRY
-     - Prevents canvas reuse errors
-  ===================================================== */
+import { chartManager } from "./chartManager.js";
+import { animateNumber, clamp, prettifyMetricKey } from "./utils.js";
+import { state } from "./state.js";
 
-  const chartRegistry = new WeakMap();
+const CIRCUMFERENCE = 2 * Math.PI * 40; // radius 40px
 
-  /* =====================================================
-     COUNT-UP ANIMATION (TEXT)
-  ===================================================== */
+function createRingChart(canvas, value) {
+  // Use chartManager to handle canvas lifecycle
+  chartManager.destroy(canvas);
 
-  function animateNumber(el, to, duration = 800) {
-    let start = 0;
-    const stepTime = 16;
-    const increment = to / (duration / stepTime);
+  const ctx = canvas.getContext("2d");
 
-    function step() {
-      start += increment;
-      if (start >= to) {
-        el.textContent = Math.round(to);
-      } else {
-        el.textContent = Math.round(start);
-        requestAnimationFrame(step);
+  // Gradient for the blue portion
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, "#8adfff");
+  gradient.addColorStop(1, "#00bfff");
+
+  const chart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      datasets: [{
+        data: [0, 100], // start from 0
+        backgroundColor: [gradient, "#e6e6e6"],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      rotation: -Math.PI / 2,
+      cutout: "72%",
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
       }
     }
+  });
 
-    step();
+  // Animate the blue portion
+  const startTime = performance.now();
+  const duration = 1000;
+
+  function animate() {
+    const progress = Math.min((performance.now() - startTime) / duration, 1);
+    const current = clamp(value) * progress;
+
+    chart.data.datasets[0].data = [current, 100 - current];
+    chart.update("none");
+
+    if (progress < 1) requestAnimationFrame(animate);
   }
 
-  /* =====================================================
-     CREATE RING CHART
-     - Grey background is static
-     - Blue gradient animates ONLY
-  ===================================================== */
+  requestAnimationFrame(animate);
 
-  function createRingChart(canvas, targetValue) {
-    const ctx = canvas.getContext("2d");
-    const value = Math.min(100, Math.max(0, Number(targetValue)));
+  return chart;
+}
 
-    // Destroy any previous chart on this canvas
-    if (chartRegistry.has(canvas)) {
-      chartRegistry.get(canvas).destroy();
-      chartRegistry.delete(canvas);
-    }
+function updateMetricCard(card, value, delta = null, label = null) {
+  const canvas = card.querySelector(".metric-chart");
+  const textEl = card.querySelector(".ring-text span");
+  const labelEl = card.querySelector(".metric-title");
+  const deltaEl = card.querySelector(".metric-delta");
 
-    // Vertical gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "#8adfff");
-    gradient.addColorStop(1, "#00bfff");
+  if (!canvas || !textEl) return;
 
-    const chart = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        datasets: [
-          {
-            data: [0, 100],
-            backgroundColor: [gradient, "#e6e6e6"],
-            borderWidth: 0
-          }
-        ]
-      },
-      options: {
-        rotation: -Math.PI / 2,
-        cutout: "72%",
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false }
-        }
-      }
-    });
+  const clampedValue = clamp(value);
 
-    chartRegistry.set(canvas, chart);
-
-    // Manual animation of ONLY the blue ring
-    const duration = 900;
-    const start = performance.now();
-
-    function animate() {
-      const progress = Math.min((performance.now() - start) / duration, 1);
-      const current = value * progress;
-
-      chart.data.datasets[0].data = [current, 100 - current];
-      chart.update("none");
-
-      if (progress < 1) requestAnimationFrame(animate);
-    }
-
-    requestAnimationFrame(animate);
-
-    return chart;
+  // Use chartManager to get existing chart or create new
+  if (!chartManager.get(canvas)) {
+    chartManager.create(canvas, createRingChart(canvas, clampedValue));
+  } else {
+    // fallback: just animate text & visual
+    animateNumber(textEl, clampedValue);
   }
 
-  /* =====================================================
-     UPDATE METRIC CARD
-  ===================================================== */
+  animateNumber(textEl, clampedValue);
 
-  function updateMetricCard(card, score, delta = null, label = null) {
-    const canvas = card.querySelector(".metric-chart");
-    const valueEl = card.querySelector(".ring-text span");
-    const titleEl = card.querySelector(".metric-title");
-    const deltaEl = card.querySelector(".metric-delta");
-
-    if (!canvas || !valueEl) return;
-
-    const clamped = Math.min(100, Math.max(0, Number(score)));
-
-    createRingChart(canvas, clamped);
-    animateNumber(valueEl, clamped);
-
-    if (label && titleEl) {
-      titleEl.textContent = label;
-    }
-
-    if (deltaEl && delta !== null) {
-      const rounded = Math.round(delta);
-      deltaEl.textContent =
-        `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`;
-
-      deltaEl.classList.toggle("positive", rounded > 0);
-      deltaEl.classList.toggle("negative", rounded < 0);
-    }
+  if (label && labelEl) {
+    labelEl.textContent = prettifyMetricKey(label);
   }
 
-  /* =====================================================
-     HYDRATE ALL RING METRICS
-  ===================================================== */
-
-  function init(data) {
-    if (!data || typeof data !== "object") {
-      console.warn("keyBrandMetric_ringChart.init called without valid data");
-      return;
-    }
-
-    document.querySelectorAll(".metric-card").forEach(card => {
-      const metricKey = card.dataset.metric;
-      if (!metricKey) return;
-
-      const score = Number(data[metricKey]);
-      if (Number.isNaN(score)) return;
-
-      const label =
-        card.dataset.label?.trim() ||
-        metricKey.replace(/_/g, " ").replace(" percent", "");
-
-      const delta = card.dataset.delta ?? null;
-
-      updateMetricCard(card, score, delta, label);
-    });
+  if (deltaEl && delta !== null) {
+    const rounded = Math.round(delta);
+    deltaEl.textContent = `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`;
+    deltaEl.classList.toggle("positive", rounded > 0);
+    deltaEl.classList.toggle("negative", rounded < 0);
   }
+}
 
-  /* =====================================================
-     PUBLIC API
-  ===================================================== */
+function populateMetrics(data) {
+  document.querySelectorAll(".metric-card").forEach(card => {
+    const key = card.dataset.metric;
+    if (!key) return;
 
-  window.keyBrandMetric_ringChart = {
-    init
-  };
+    const score = data?.[key] ?? 0;
+    const label = card.dataset.label ?? key;
+    const delta = card.dataset.delta ?? null;
 
-  /* =====================================================
-     AUTO-INIT (OPTIONAL)
-     - Allows Webflow page JS to set data first
-  ===================================================== */
+    updateMetricCard(card, score, delta, label);
+  });
+}
 
-  if (window.autoInitRingMetrics) {
-    window.keyBrandMetric_ringChart.init(window.autoInitRingMetrics);
+export const keyBrandMetric_ringChart = {
+  init(apiData = null) {
+    const data = apiData || state.getState();
+    if (!data) return;
+
+    populateMetrics(data);
   }
-
-})();
-</script>
-
+};
