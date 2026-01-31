@@ -1,6 +1,6 @@
 import { fetchDashboardData } from "./core/apiClient";
 import { initLineMetrics } from "./widgets/lineMetrics";
-import { initRingMetrics } from "./widgets/ringMetric";
+import { initRingMetrics } from "./widgets/keyBrandMetric_ringChart";
 
 
 document.addEventListener("DOMContentLoaded", async () => {
