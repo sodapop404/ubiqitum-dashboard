@@ -36,4 +36,9 @@
   "tinyglobby": "^0.2.15"
 }
 
+  "optionalDependencies": {
+  "fsevents": "*"
+}
+
+
 }
