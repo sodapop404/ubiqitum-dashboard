@@ -1,113 +1,112 @@
 // keyBrandMetric_ringChart.js
+// Ring chart for key brand metrics
+// Uses global Chart, chartManager, state, utils
 
-import { chartManager } from "./chartManager.js";
-import { animateNumber, clamp, prettifyMetricKey } from "./utils.js";
-import { state } from "./state.js";
+(function (window) {
 
-const CIRCUMFERENCE = 2 * Math.PI * 40; // radius 40px
+  const CIRCUMFERENCE = 2 * Math.PI * 40; // radius 40px
 
-function createRingChart(canvas, value) {
-  // Use chartManager to handle canvas lifecycle
-  chartManager.destroy(canvas);
+  // Animate blue portion of doughnut chart
+  function createRingChart(canvas, value) {
+    chartManager.destroy(canvas);
 
-  const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
 
-  // Gradient for the blue portion
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "#8adfff");
-  gradient.addColorStop(1, "#00bfff");
+    // Blue gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "#8adfff");
+    gradient.addColorStop(1, "#00bfff");
 
-  const chart = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      datasets: [{
-        data: [0, 100], // start from 0
-        backgroundColor: [gradient, "#e6e6e6"],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      rotation: -Math.PI / 2,
-      cutout: "72%",
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false }
+    const chart = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        datasets: [{
+          data: [0, 100],
+          backgroundColor: [gradient, "#e6e6e6"],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        rotation: -Math.PI / 2,
+        cutout: "72%",
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        }
       }
+    });
+
+    const startTime = performance.now();
+    const duration = 1000;
+
+    function animate() {
+      const progress = Math.min((performance.now() - startTime) / duration, 1);
+      const current = Math.min(Math.max(0, value)) * progress;
+
+      chart.data.datasets[0].data = [current, 100 - current];
+      chart.update("none");
+
+      if (progress < 1) requestAnimationFrame(animate);
     }
-  });
 
-  // Animate the blue portion
-  const startTime = performance.now();
-  const duration = 1000;
+    requestAnimationFrame(animate);
 
-  function animate() {
-    const progress = Math.min((performance.now() - startTime) / duration, 1);
-    const current = clamp(value) * progress;
-
-    chart.data.datasets[0].data = [current, 100 - current];
-    chart.update("none");
-
-    if (progress < 1) requestAnimationFrame(animate);
+    return chart;
   }
 
-  requestAnimationFrame(animate);
+  function updateMetricCard(card, value, delta = null, label = null) {
+    const canvas = card.querySelector(".metric-chart");
+    const textEl = card.querySelector(".ring-text span");
+    const labelEl = card.querySelector(".metric-title");
+    const deltaEl = card.querySelector(".metric-delta");
 
-  return chart;
-}
+    if (!canvas || !textEl) return;
 
-function updateMetricCard(card, value, delta = null, label = null) {
-  const canvas = card.querySelector(".metric-chart");
-  const textEl = card.querySelector(".ring-text span");
-  const labelEl = card.querySelector(".metric-title");
-  const deltaEl = card.querySelector(".metric-delta");
+    const clampedValue = Math.min(Math.max(0, Number(value)));
 
-  if (!canvas || !textEl) return;
+    if (!chartManager.get(canvas)) {
+      chartManager.create(canvas, createRingChart(canvas, clampedValue));
+    }
 
-  const clampedValue = clamp(value);
-
-  // Use chartManager to get existing chart or create new
-  if (!chartManager.get(canvas)) {
-    chartManager.create(canvas, createRingChart(canvas, clampedValue));
-  } else {
-    // fallback: just animate text & visual
+    // Animate the number regardless
     animateNumber(textEl, clampedValue);
+
+    if (label && labelEl) {
+      labelEl.textContent = prettifyMetricKey(label);
+    }
+
+    if (deltaEl && delta !== null) {
+      const rounded = Math.round(Number(delta));
+      deltaEl.textContent = `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`;
+      deltaEl.classList.toggle("positive", rounded > 0);
+      deltaEl.classList.toggle("negative", rounded < 0);
+    }
   }
 
-  animateNumber(textEl, clampedValue);
+  function populateMetrics(data) {
+    document.querySelectorAll(".metric-card").forEach(card => {
+      const key = card.dataset.metric;
+      if (!key) return;
 
-  if (label && labelEl) {
-    labelEl.textContent = prettifyMetricKey(label);
+      const score = data?.[key] ?? 0;
+      const label = card.dataset.label ?? key;
+      const delta = card.dataset.delta ?? null;
+
+      updateMetricCard(card, score, delta, label);
+    });
   }
 
-  if (deltaEl && delta !== null) {
-    const rounded = Math.round(delta);
-    deltaEl.textContent = `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`;
-    deltaEl.classList.toggle("positive", rounded > 0);
-    deltaEl.classList.toggle("negative", rounded < 0);
-  }
-}
+  // Public API
+  window.keyBrandMetric_ringChart = {
+    init(apiData = null) {
+      const data = apiData || (window.state && state.getState());
+      if (!data) return;
 
-function populateMetrics(data) {
-  document.querySelectorAll(".metric-card").forEach(card => {
-    const key = card.dataset.metric;
-    if (!key) return;
+      populateMetrics(data);
+    }
+  };
 
-    const score = data?.[key] ?? 0;
-    const label = card.dataset.label ?? key;
-    const delta = card.dataset.delta ?? null;
-
-    updateMetricCard(card, score, delta, label);
-  });
-}
-
-export const keyBrandMetric_ringChart = {
-  init(apiData = null) {
-    const data = apiData || state.getState();
-    if (!data) return;
-
-    populateMetrics(data);
-  }
-};
+})(window);
