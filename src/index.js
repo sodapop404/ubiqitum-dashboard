@@ -2,7 +2,7 @@ import { fetchDashboardData } from "./core/apiClient";
 import KeyBrandMetricRingChart from './widgets/keyBrandMetric_ringChart.js';
 import './styles/charts.css';
 
-window.keyBrandMetric_ringChart = keyBrandMetric_ringChart;
+window.keyBrandMetric_ringChart = KeyBrandMetricRingChart;
 
 document.addEventListener("DOMContentLoaded", async () => {
   const url = getSubmittedUrl();
