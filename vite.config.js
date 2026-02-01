@@ -1,16 +1,20 @@
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite'
+import path from 'path'
 
 export default defineConfig({
+  root: 'src', // your source files
   build: {
-    outDir: "dist",
+    outDir: '../dist', // compiled bundle goes here
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        keyBrandMetric_ringChart: "src/entries/ringChart.entry.js"
+        main: path.resolve(__dirname, 'src/index.js') // entry file
       },
       output: {
-        entryFileNames: "[name].bundle.js"
+        format: 'iife', // Immediately Invoked Function Expression for browsers
+        name: 'UbiqitumDashboard', // attaches to window.UbiqitumDashboard
+        entryFileNames: 'bundle.js'
       }
     }
   }
-});
+})
