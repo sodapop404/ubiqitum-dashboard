@@ -1,20 +1,16 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
-    lib: {
-      entry: 'src/index.js',
-      name: 'UbiqitumDashboard',
-      fileName: () => 'ubiqitum-dashboard.bundle.js'
-    },
+    outDir: "dist",
+    emptyOutDir: true,
     rollupOptions: {
-      external: ['chart.js'],
+      input: {
+        keyBrandMetric_ringChart: "src/entries/ringChart.entry.js"
+      },
       output: {
-        globals: {
-          'chart.js': 'Chart'
-        }
+        entryFileNames: "[name].bundle.js"
       }
     }
   }
 });
-
