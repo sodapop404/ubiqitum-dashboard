@@ -1,8 +1,12 @@
 {
   "name": "ubiqitum-dashboard",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
   }
 }
-
