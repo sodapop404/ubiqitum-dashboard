@@ -1,112 +1,113 @@
 // keyBrandMetric_ringChart.js
-// Ring chart for key brand metrics
-// Uses global Chart, chartManager, state, utils
+// Ring chart for key brand metrics using Chart.js
+// Converted to ES Module with default export
 
-(function (window) {
+import { Chart } from "chart.js";
+import { chartManager } from "./core/chartManager.js"; // your global chartManager
+import { animateNumber, prettifyMetricKey } from "./core/utils.js";
 
-  const CIRCUMFERENCE = 2 * Math.PI * 40; // radius 40px
+const CIRCUMFERENCE = 2 * Math.PI * 40; // radius 40px
 
-  // Animate blue portion of doughnut chart
-  function createRingChart(canvas, value) {
-    chartManager.destroy(canvas);
+function createRingChart(canvas, value) {
+  chartManager.destroy(canvas);
 
-    const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d");
 
-    // Blue gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "#8adfff");
-    gradient.addColorStop(1, "#00bfff");
+  // Blue gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, "#8adfff");
+  gradient.addColorStop(1, "#00bfff");
 
-    const chart = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        datasets: [{
-          data: [0, 100],
-          backgroundColor: [gradient, "#e6e6e6"],
-          borderWidth: 0
-        }]
-      },
-      options: {
-        rotation: -Math.PI / 2,
-        cutout: "72%",
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false }
-        }
+  const chart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      datasets: [{
+        data: [0, 100],
+        backgroundColor: [gradient, "#e6e6e6"],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      rotation: -Math.PI / 2,
+      cutout: "72%",
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
       }
-    });
-
-    const startTime = performance.now();
-    const duration = 1000;
-
-    function animate() {
-      const progress = Math.min((performance.now() - startTime) / duration, 1);
-      const current = Math.min(Math.max(0, value)) * progress;
-
-      chart.data.datasets[0].data = [current, 100 - current];
-      chart.update("none");
-
-      if (progress < 1) requestAnimationFrame(animate);
     }
+  });
 
-    requestAnimationFrame(animate);
+  const startTime = performance.now();
+  const duration = 1000;
 
-    return chart;
+  function animate() {
+    const progress = Math.min((performance.now() - startTime) / duration, 1);
+    const current = Math.min(Math.max(0, value)) * progress;
+
+    chart.data.datasets[0].data = [current, 100 - current];
+    chart.update("none");
+
+    if (progress < 1) requestAnimationFrame(animate);
   }
 
-  function updateMetricCard(card, value, delta = null, label = null) {
-    const canvas = card.querySelector(".metric-chart");
-    const textEl = card.querySelector(".ring-text span");
-    const labelEl = card.querySelector(".metric-title");
-    const deltaEl = card.querySelector(".metric-delta");
+  requestAnimationFrame(animate);
 
-    if (!canvas || !textEl) return;
+  return chart;
+}
 
-    const clampedValue = Math.min(Math.max(0, Number(value)));
+function updateMetricCard(card, value, delta = null, label = null) {
+  const canvas = card.querySelector(".metric-chart");
+  const textEl = card.querySelector(".ring-text span");
+  const labelEl = card.querySelector(".metric-title");
+  const deltaEl = card.querySelector(".metric-delta");
 
-    if (!chartManager.get(canvas)) {
-      chartManager.create(canvas, createRingChart(canvas, clampedValue));
-    }
+  if (!canvas || !textEl) return;
 
-    // Animate the number regardless
-    animateNumber(textEl, clampedValue);
+  const clampedValue = Math.min(Math.max(0, Number(value)));
 
-    if (label && labelEl) {
-      labelEl.textContent = prettifyMetricKey(label);
-    }
-
-    if (deltaEl && delta !== null) {
-      const rounded = Math.round(Number(delta));
-      deltaEl.textContent = `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`;
-      deltaEl.classList.toggle("positive", rounded > 0);
-      deltaEl.classList.toggle("negative", rounded < 0);
-    }
+  if (!chartManager.get(canvas)) {
+    chartManager.create(canvas, createRingChart(canvas, clampedValue));
   }
 
-  function populateMetrics(data) {
-    document.querySelectorAll(".metric-card").forEach(card => {
-      const key = card.dataset.metric;
-      if (!key) return;
+  // Animate the number regardless
+  animateNumber(textEl, clampedValue);
 
-      const score = data?.[key] ?? 0;
-      const label = card.dataset.label ?? key;
-      const delta = card.dataset.delta ?? null;
-
-      updateMetricCard(card, score, delta, label);
-    });
+  if (label && labelEl) {
+    labelEl.textContent = prettifyMetricKey(label);
   }
 
-  // Public API
-  window.keyBrandMetric_ringChart = {
-    init(apiData = null) {
-      const data = apiData || (window.state && state.getState());
-      if (!data) return;
+  if (deltaEl && delta !== null) {
+    const rounded = Math.round(Number(delta));
+    deltaEl.textContent = `${rounded > 0 ? "▲" : rounded < 0 ? "▼" : ""} ${Math.abs(rounded)}%`;
+    deltaEl.classList.toggle("positive", rounded > 0);
+    deltaEl.classList.toggle("negative", rounded < 0);
+  }
+}
 
-      populateMetrics(data);
-    }
-  };
+function populateMetrics(data) {
+  document.querySelectorAll(".metric-card").forEach(card => {
+    const key = card.dataset.metric;
+    if (!key) return;
 
-})(window);
+    const score = data?.[key] ?? 0;
+    const label = card.dataset.label ?? key;
+    const delta = card.dataset.delta ?? null;
+
+    updateMetricCard(card, score, delta, label);
+  });
+}
+
+// Default export for ES Module
+const keyBrandMetric_ringChart = {
+  init(apiData = null) {
+    const data = apiData || (window.state && state.getState());
+    if (!data) return;
+
+    populateMetrics(data);
+  }
+};
+
+export default keyBrandMetric_ringChart;
