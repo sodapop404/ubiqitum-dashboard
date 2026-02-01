@@ -1,29 +1,24 @@
-// src/index.js
-
-import { fetchDashboardData } from "./core/apiClient";
+import { fetchDashboardData } from "./core/apiClient.js";
 import KeyBrandMetricRingChart from './widgets/keyBrandMetric_ringChart.js';
 import './styles/charts.css';
 
-// Expose the ring chart module to the global window object
+// Optional: attach to window if you want global access
 window.keyBrandMetric_ringChart = KeyBrandMetricRingChart;
 
-// DOM ready
+// Helper to get submitted URL (assuming you have a function like this)
+function getSubmittedUrl() {
+  const input = document.querySelector("#dashboard-url-input");
+  return input ? input.value : null;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
-  // Helper function to get the submitted URL (assumes defined elsewhere)
-  const url = getSubmittedUrl?.();
+  const url = getSubmittedUrl();
   if (!url) return;
 
   try {
-    // Fetch dashboard data
     const data = await fetchDashboardData(url);
-
-    // Initialize ring metrics chart if function exists
-    if (typeof initRingMetrics === "function") {
-      initRingMetrics(data);
-    } else {
-      console.warn("initRingMetrics function not found.");
-    }
+    KeyBrandMetricRingChart.init(data); // initialize all ring charts
   } catch (err) {
-    console.error("Error fetching dashboard data:", err);
+    console.error("Failed to fetch dashboard data:", err);
   }
 });
